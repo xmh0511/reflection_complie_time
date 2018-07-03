@@ -75,7 +75,7 @@ std::enable_if_t<has_reflect<typename std::remove_reference<Class>::type>::value
 template<typename Class,typename F>
 std::enable_if_t<!has_reflect<typename std::remove_reference<Class>::type>::value,void> get_member(Class&& obj,const std::string& member_name,F&& lambda)
 {
-   assert(false);
+    static_assert(has_reflect<typename std::remove_reference<Class>::type>::value,"not a reflection type");
 };
 template<int Index,typename F,typename T,typename...Args>
 void dynamic_each_tuple(int find_index,const std::tuple<T,Args...>& tuple,F&& lambda)
