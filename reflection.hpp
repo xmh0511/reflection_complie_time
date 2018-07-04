@@ -439,6 +439,33 @@ inline auto reflect_function(const STRUCT_NAME&) \
     return struct_meta_info_{}; \
 }
 
+template<typename T>
+struct is_a_class_point:std::false_type
+{
+
+};
+template<typename T>
+struct is_a_class_point<T*>:std::true_type
+{
+
+};
+
+template<typename T>
+struct remove_ref_and_point
+{
+    using type = T;
+};
+template<typename T>
+struct remove_ref_and_point<T*>
+{
+    using type = typename remove_ref_and_point<T>::type;
+};
+
+template<typename T>
+struct remove_ref_and_point<T&>
+{
+    using type = typename remove_ref_and_point<T>::type;
+};
 template<typename T,typename U = void>
 struct has_reflect
 {
@@ -452,9 +479,9 @@ struct has_reflect<T,std::void_t<decltype(reflect_function(std::declval<T>()))>>
 };
 
 template<typename Class,typename F>
-std::enable_if_t<has_reflect<typename std::remove_reference<Class>::type>::value,void> get_member(Class&& obj,const std::string& member_name,F&& lambda)
+std::enable_if_t<has_reflect<typename remove_ref_and_point<Class>::type>::value,void> get_member(Class&& obj,const std::string& member_name,F&& lambda)
 {
-     auto meta_info = reflect_function(obj);
+     auto meta_info = reflect_function(typename remove_ref_and_point<Class>::type{});
       auto members_str = meta_info.get_member_str_arr();
      for(int i=0;i<members_str.size();i++){
          if(members_str[i] == member_name){
@@ -464,9 +491,9 @@ std::enable_if_t<has_reflect<typename std::remove_reference<Class>::type>::value
      }
 }
 template<typename Class,typename F>
-std::enable_if_t<!has_reflect<typename std::remove_reference<Class>::type>::value,void> get_member(Class&& obj,const std::string& member_name,F&& lambda)
+std::enable_if_t<!has_reflect<typename remove_ref_and_point<Class>::type>::value,void> get_member(Class&& obj,const std::string& member_name,F&& lambda)
 {
-    static_assert(has_reflect<typename std::remove_reference<Class>::type>::value,"not a reflection type");
+    static_assert(has_reflect<typename remove_ref_and_point<Class>::type>::value,"not a reflection type");
 };
 
 template<int Index,typename F,typename T,std::size_t First,std::size_t...inter_quence>
@@ -492,5 +519,21 @@ template<typename Tuple,typename F>
 void each_tuple(int find_index,const Tuple& t,F&& lambda)
 {
     dynamic_each_tuple<0>(find_index,t,std::make_index_sequence<std::tuple_size<Tuple>::value>{},std::forward<F>(lambda));
+};
+
+template<typename T,typename F>
+std::enable_if_t<!is_a_class_point<T>::value> get_member_from_t(T&& t,const std::string& name,F&& function)
+{
+    get_member(std::forward<T>(t),name,[&t,lambda = std::move(function)](auto offset){
+        lambda((t.*offset));
+    });
+};
+
+template<typename T,typename F>
+std::enable_if_t<is_a_class_point<T>::value> get_member_from_t(T&& t,const std::string& name,F&& function)
+{
+    get_member(std::forward<T>(t),name,[&t,lambda = std::move(function)](auto offset){
+        lambda((t->*offset));
+    });
 };
 #endif //UNTITLED51_REFLECTION_HPP_HPP

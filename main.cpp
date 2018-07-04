@@ -13,13 +13,10 @@ int main()
     Test t;
     t.a = 10;
     t.b = 20.1;
-    auto res = reflect_function(t);
-    auto tuple = res.get_member_addr();
-    auto arr = res.get_member_str_arr();
-    int a;
-    get_member(t,"b",[&t](auto x){
-        std::cout<<(t.*x)<<std::endl;
+    get_member_from_t(t,"b",[](auto& x){
+       std::cout<<x<<std::endl;
+        x = 1024.56;
     });
-
+    std::cout<<t.b<<std::endl;
     return 0;
 }
